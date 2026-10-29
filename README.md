@@ -13,7 +13,6 @@ A tiny local Chrome extension. No dependencies, build step, or data collection.
 
 - Press **Alt+Shift+B** (Windows) / **Option+Shift+B** (macOS), then drag a rectangle immediately. This browser-registered shortcut works in browser fullscreen without any prior icon click, including after page reloads. You can also left-click the extension icon.
 - Both keyboard controls use the physical **B key position**, independent of the active language. The extension loads automatically on permitted webpages for this to work without prior activation. Chrome's separately registered toolbar shortcut can be customized at `chrome://extensions/shortcuts`; the physical page shortcuts remain fixed. OS-reserved shortcuts can still take precedence.
-- **Ctrl+Shift+double-click** also starts a new selection without the toolbar (useful in browser fullscreen). The website may still receive the individual clicks; use an empty spot rather than a link or button.
 - Release the mouse: everything outside the rectangle is blurred, desaturated (35% saturation), and brightened (120% brightness) for a paler appearance. The selected area stays unchanged.
 - Keep using the website normally—even blurred areas remain clickable and scrollable. The overlay does not take keyboard focus.
 - Press **Shift+B** to toggle settings inside the clear rectangle. **Esc** or **Close** dismisses them. The shortcut ignores text fields; no prior icon click is needed. Without a selection, settings appear in the center of the screen.
