@@ -1,0 +1,28 @@
+{
+  "manifest_version": 3,
+  "name": "Blur — Help Me Focus",
+  "version": "0.2.0",
+  "description": "Select an area to keep sharp while visually blurring the rest of the page.",
+  "permissions": ["activeTab", "scripting", "storage", "contextMenus"],
+  "action": {
+    "default_title": "Drag to focus · Right-click for settings"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "commands": {
+    "_execute_action": {
+      "suggested_key": {
+        "default": "Alt+Shift+B",
+        "mac": "Alt+Shift+B"
+      }
+    }
+  }
+}
