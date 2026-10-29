@@ -164,6 +164,7 @@
       const { box, direction } = drag;
       const dx = event.clientX - drag.x;
       const dy = event.clientY - drag.y;
+      if (settings && (dx !== 0 || dy !== 0)) settings.hidden = true;
       area = { ...box };
       if (!direction) {
         const x = clamp(dx, -box.left, window.innerWidth - box.right);
@@ -202,7 +203,11 @@
   });
 
   function toggleSettings() {
-    if (settings) return;
+    if (settings) {
+      settings.hidden = false;
+      settings.querySelector("input").focus({ preventScroll: true });
+      return;
+    }
     cancelSelection?.();
     previousFocus = document.activeElement;
     openEditor();
