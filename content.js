@@ -17,6 +17,22 @@
         backdrop-filter: blur(8px) saturate(35%) brightness(120%);
         -webkit-backdrop-filter: blur(8px) saturate(35%) brightness(120%);
       }
+      .editor {
+        position: absolute;
+        border: 2px solid #4285f4;
+        pointer-events: auto;
+        cursor: move;
+        touch-action: none;
+        user-select: none;
+      }
+      .handle {
+        position: absolute;
+        width: 12px;
+        height: 12px;
+        background: white;
+        border: 2px solid #4285f4;
+        transform: translate(-50%, -50%);
+      }
       .settings {
         position: absolute;
         pointer-events: auto;
@@ -80,11 +96,15 @@
   let area = null;
   let cancelSelection = null;
   let settings = null;
+  let editor = null;
   let previousFocus = null;
   let strength = 8;
 
   function closeSettings() {
     if (!settings) return;
+    editor?.remove();
+    editor = null;
+    blur.style.pointerEvents = "none";
     settings.remove();
     settings = null;
     if (previousFocus?.isConnected) previousFocus.focus({ preventScroll: true });
@@ -103,10 +123,89 @@
       top + (bottom - top - height) / 2, width, height);
   }
 
+  function openEditor() {
+    if (!area) return;
+    // Normalize to the current viewport before manipulating the rectangle.
+    area = {
+      left: Math.max(0, Math.min(area.left, window.innerWidth - 4)),
+      top: Math.max(0, Math.min(area.top, window.innerHeight - 4)),
+      right: Math.min(area.right, window.innerWidth),
+      bottom: Math.min(area.bottom, window.innerHeight),
+    };
+    editor = document.createElement("div");
+    editor.className = "editor";
+    editor.title = "Drag to move · Drag handles to resize · Esc to finish";
+    for (const [direction, x, y, cursor] of [
+      ["nw", 0, 0, "nwse"], ["n", 50, 0, "ns"], ["ne", 100, 0, "nesw"],
+      ["w", 0, 50, "ew"], ["e", 100, 50, "ew"],
+      ["sw", 0, 100, "nesw"], ["s", 50, 100, "ns"], ["se", 100, 100, "nwse"],
+    ]) {
+      const handle = document.createElement("div");
+      handle.className = "handle";
+      handle.dataset.direction = direction;
+      handle.style.cssText = `left:${x}%;top:${y}%;cursor:${cursor}-resize`;
+      editor.append(handle);
+    }
+    shadow.append(editor);
+    blur.style.pointerEvents = "auto";
+    let drag = null;
+    const clamp = (value, min, max) => Math.max(min, Math.min(value, max));
+    editor.addEventListener("pointerdown", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      if (event.button !== 0 || drag) return;
+      drag = { x: event.clientX, y: event.clientY, box: { ...area },
+        direction: event.target.dataset.direction, id: event.pointerId };
+      editor.setPointerCapture(event.pointerId);
+    });
+    editor.addEventListener("pointermove", (event) => {
+      event.stopPropagation();
+      if (!drag || event.pointerId !== drag.id) return;
+      const { box, direction } = drag;
+      const dx = event.clientX - drag.x;
+      const dy = event.clientY - drag.y;
+      area = { ...box };
+      if (!direction) {
+        const x = clamp(dx, -box.left, window.innerWidth - box.right);
+        const y = clamp(dy, -box.top, window.innerHeight - box.bottom);
+        area = { left: box.left + x, right: box.right + x,
+          top: box.top + y, bottom: box.bottom + y };
+      } else {
+        if (direction.includes("w")) area.left = clamp(box.left + dx, 0, box.right - 4);
+        if (direction.includes("e")) area.right = clamp(box.right + dx, box.left + 4, window.innerWidth);
+        if (direction.includes("n")) area.top = clamp(box.top + dy, 0, box.bottom - 4);
+        if (direction.includes("s")) area.bottom = clamp(box.bottom + dy, box.top + 4, window.innerHeight);
+      }
+      render();
+    });
+    for (const type of ["pointerup", "pointercancel", "lostpointercapture"]) {
+      editor.addEventListener(type, (event) => {
+        event.stopPropagation();
+        if (drag?.id !== event.pointerId) return;
+        drag = null;
+        if (editor.hasPointerCapture(event.pointerId)) editor.releasePointerCapture(event.pointerId);
+      });
+    }
+    editor.addEventListener("click", (event) => event.stopPropagation());
+    render();
+  }
+
+  // Consume the click so finishing an edit cannot activate the page underneath.
+  blur.addEventListener("pointerdown", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+  });
+  blur.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    closeSettings();
+  });
+
   function toggleSettings() {
-    if (settings) { closeSettings(); return; }
+    if (settings) return;
     cancelSelection?.();
     previousFocus = document.activeElement;
+    openEditor();
     settings = document.createElement("div");
     settings.className = "settings";
     settings.setAttribute("role", "dialog");
@@ -166,6 +265,9 @@
 
   function render() {
     positionSettings();
+    if (editor && area) {
+      position(editor, area.left, area.top, area.right - area.left, area.bottom - area.top);
+    }
     if (!area) {
       blur.style.display = "none";
       return;
